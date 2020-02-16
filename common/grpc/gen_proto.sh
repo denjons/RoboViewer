@@ -1,1 +1,1 @@
-protoc -I positionreport/ positionreport/position-report.proto --go_out=plugins=grpc:positionreport
+protoc -I positionreport/ positionreport/position_report.proto --go_out=plugins=grpc:positionreport
