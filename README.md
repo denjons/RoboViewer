@@ -1,13 +1,14 @@
 # RoboViewer
 
-#run from root directory
+## How to run
+Run the following from the project root.
 
-#docker-compose
-docker-compose up -d
+docker-compose:
+`docker-compose up -d`
 
-#robot gateway server
-go run robot_gateway/server/server.go
+robot gateway server:
+`go run robot_gateway/server/server.go`
 
-#robot gateway client
-go run robot_gateway/server/client.go
+robot gateway client:
+`go run robot_gateway/server/client.go`
 
