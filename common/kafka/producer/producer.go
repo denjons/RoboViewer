@@ -8,37 +8,44 @@ import (
 
 // Producer puts an event to a Kafka topic
 type Producer interface {
-	Put(events chan Event) error
+	Listen(events chan *[]byte) error
+	Start() error
 }
 
-// Event is generic type for events publidhed on a Kafka topic
-type Event interface {
-	ToJSON() []byte
+// KafkaProducer for the Kafka broker
+type KafkaProducer struct {
+	Topic    string
+	Broker   string
+	Producer *kafka.Producer
 }
 
-// JSONProducer for the Kafka broker
-type JSONProducer struct {
-	Topic  string
-	Broker string
-}
-
-// Put events on a Kafla topic through the given channel
-func (jp *JSONProducer) Put(eventChannel chan Event) error {
-
-	producer, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": jp.Broker})
+// NewKafkaProducer creates a new KafkaProducer
+func NewKafkaProducer(broker, topic string) (*KafkaProducer, error) {
+	producer, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": broker})
 
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	p := &KafkaProducer{}
+	p.Producer = producer
+	p.Broker = broker
+	p.Topic = topic
+
+	return p, nil
+}
+
+// Listen to events from given channel and put them on Kafka topic
+func (kp *KafkaProducer) Listen(eventChannel chan *[]byte) error {
 
 	for value := range eventChannel {
 		doneChan := make(chan bool)
-		deferCloseProducer(producer, doneChan)
-		producer.ProduceChannel() <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: &jp.Topic, Partition: kafka.PartitionAny}, Value: value.ToJSON()}
+		deferCloseProducer(kp.Producer, doneChan)
+		kp.Producer.ProduceChannel() <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: &kp.Topic, Partition: kafka.PartitionAny}, Value: *value}
 		_ = <-doneChan
 	}
 
-	producer.Close()
+	kp.Producer.Close()
 
 	return nil
 }
