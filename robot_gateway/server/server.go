@@ -9,7 +9,7 @@ import (
 
 	pb "github.com/denjons/RoboViewer/common/grpc/positionreport"
 	pr "github.com/denjons/RoboViewer/common/kafka/producer"
-	model "github.com/denjons/RoboViewer/common/model/position"
+	model "github.com/denjons/RoboViewer/common/model"
 	ev "github.com/denjons/RoboViewer/robot_gateway/event"
 	"google.golang.org/grpc"
 )
