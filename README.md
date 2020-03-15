@@ -13,6 +13,11 @@ robot gateway server:
 go run robot_gateway/server/server.go
 ```
 
+robot progress processor
+```
+go run robot_progress_processor/server/server.go
+```
+
 robot gateway client:
 ```
 go run robot_gateway/client/client.go
