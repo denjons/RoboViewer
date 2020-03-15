@@ -22,8 +22,8 @@ type KafkaConsumer struct {
 // NewKafkaConsumer creates a new consumer
 func NewKafkaConsumer(broker *string, group *string, topics *[]string) (*KafkaConsumer, error) {
 	c, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":               broker,
-		"group.id":                        group,
+		"bootstrap.servers":               *broker,
+		"group.id":                        *group,
 		"session.timeout.ms":              6000,
 		"go.events.channel.enable":        true,
 		"go.application.rebalance.enable": true,
@@ -44,7 +44,9 @@ func (kc *KafkaConsumer) Start(consumerChannel chan *[]byte) {
 
 	err := kc.consumer.SubscribeTopics(*kc.Topics, nil)
 
-	log.Fatalf("Error starting consumer %v", err)
+	if err != nil {
+		log.Fatalf("Error starting consumer %v", err)
+	}
 
 	sigchan := make(chan os.Signal, 1)
 
