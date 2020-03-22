@@ -20,7 +20,7 @@ func TestNewFloorEmptyName(t *testing.T) {
 	evalErrorMessage(err, "name cannot be empty", t)
 }
 
-func TestNewFloorWidthError(t *testing.T) {
+func TestNewFloorZeroWidth(t *testing.T) {
 	name := "living room"
 
 	_, err := model.NewFloor(&name, 0, 10)
@@ -28,7 +28,7 @@ func TestNewFloorWidthError(t *testing.T) {
 	evalErrorMessage(err, "width must be positive", t)
 }
 
-func TestNewFloorHeightError(t *testing.T) {
+func TestNewFloorZeroHeight(t *testing.T) {
 	name := "living room"
 
 	_, err := model.NewFloor(&name, 10, 0)

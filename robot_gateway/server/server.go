@@ -41,19 +41,10 @@ func (s *server) ReportPosition(stream pb.PositionReport_ReportPositionServer) e
 
 		log.Printf("Received position X: %v, Y: %v", positionUpdate.Position.X, positionUpdate.Position.Y)
 
-		evErr := s.Handler.HandleEvent(parse(positionUpdate))
+		evErr := s.Handler.HandleEvent(model.ConvertToPositionUpdateEvent(positionUpdate))
 		if evErr != nil {
 			return evErr
 		}
-	}
-}
-
-func parse(positionUpdate *pb.PositionUpdate) *model.PositionUpdateEvent {
-	return &model.PositionUpdateEvent{
-		Sequence:  positionUpdate.SequenceNumber.Count,
-		RobotID:   positionUpdate.RobotId.Id,
-		SessionID: positionUpdate.SessionId.Id,
-		Position:  &model.Position{X: positionUpdate.Position.X, Y: positionUpdate.Position.Y},
 	}
 }
 

@@ -6,7 +6,7 @@ option java_outer_classname = "PositionReportProto";
 
 package positionreport;
 
-service PositionReport {    
+service PositionReport { 
     rpc ReportPosition(stream PositionUpdate) returns (PeportResponse) {}
 }
 
@@ -14,7 +14,7 @@ message PositionUpdate {
     SequenceNumber sequenceNumber = 1;
     Position position = 2;
     RobotId robotId = 3;
-    SessionId sessionId = 4; 
+    SessionId sessionId = 4;
 }
 
 message PeportResponse {
@@ -28,7 +28,7 @@ enum ResponseStatus {
 }
 
 message SequenceNumber{
-    int64 count = 1;
+    int64 Value = 1;
 }
 
 message Position {
@@ -37,9 +37,9 @@ message Position {
 }
 
 message RobotId {
-    string id = 1;
+    string Value = 1;
 }
 
 message SessionId {
-    string id = 1;
+    string Value = 1;
 }
