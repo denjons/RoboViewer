@@ -12,7 +12,7 @@ var (
 )
 
 func TestNewRectangularRobot(t *testing.T) {
-	robot, err := model.NewRectangularRobot(&robot_ID, &robot_name, 4, 4)
+	robot, err := model.NewRectangularRobot(robot_ID, robot_name, 4, 4)
 
 	if err != nil {
 		t.Errorf("NewRectangularRobot() got error %v", err)
@@ -31,40 +31,26 @@ func TestNewRectangularRobot(t *testing.T) {
 
 }
 
-func TestNewRectangularRobotNilName(t *testing.T) {
-	_, err := model.NewRectangularRobot(&robot_ID, nil, 4, 4)
-
-	evalErrorMessage(err, "Robot name cannot be nil", t)
-}
-
 func TestNewRectangularRobotEmptyName(t *testing.T) {
-	name := ""
-	_, err := model.NewRectangularRobot(&robot_ID, &name, 4, 4)
+	_, err := model.NewRectangularRobot(robot_ID, "", 4, 4)
 
 	evalErrorMessage(err, "Robot name cannot be empty", t)
 }
 
-func TestNewRectangularRobotNilID(t *testing.T) {
-	_, err := model.NewRectangularRobot(nil, &robot_name, 4, 4)
-
-	evalErrorMessage(err, "Robot ID cannot be nil", t)
-}
-
 func TestNewRectangularRobotEmptyID(t *testing.T) {
-	ID := ""
-	_, err := model.NewRectangularRobot(&ID, &robot_name, 4, 4)
+	_, err := model.NewRectangularRobot("", robot_name, 4, 4)
 
 	evalErrorMessage(err, "Robot ID cannot be empty", t)
 }
 
 func TestNewRectangularRobotZeroWidth(t *testing.T) {
-	_, err := model.NewRectangularRobot(&robot_ID, &robot_name, 0, 4)
+	_, err := model.NewRectangularRobot(robot_ID, robot_name, 0, 4)
 
 	evalErrorMessage(err, "Robot width must be positive", t)
 }
 
 func TestNewRectangularRobotZeroHeight(t *testing.T) {
-	_, err := model.NewRectangularRobot(&robot_ID, &robot_name, 4, 0)
+	_, err := model.NewRectangularRobot(robot_ID, robot_name, 4, 0)
 
 	evalErrorMessage(err, "Robot height must be positive", t)
 }

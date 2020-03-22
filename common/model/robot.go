@@ -15,13 +15,9 @@ type Robot struct {
 }
 
 // NewRectangularRobot return s new robot in a square shape
-func NewRectangularRobot(ID *string, name *string, width int, height int) (*Robot, error) {
+func NewRectangularRobot(ID string, name string, width int, height int) (*Robot, error) {
 
-	if name == nil {
-		return nil, errors.New("Robot name cannot be nil")
-	}
-
-	if *name == "" {
+	if name == "" {
 		return nil, errors.New("Robot name cannot be empty")
 	}
 
@@ -33,11 +29,7 @@ func NewRectangularRobot(ID *string, name *string, width int, height int) (*Robo
 		return nil, errors.New("Robot height must be positive")
 	}
 
-	if ID == nil {
-		return nil, errors.New("Robot ID cannot be nil")
-	}
-
-	if *ID == "" {
+	if ID == "" {
 		return nil, errors.New("Robot ID cannot be empty")
 	}
 
@@ -50,7 +42,7 @@ func NewRectangularRobot(ID *string, name *string, width int, height int) (*Robo
 		}
 	}
 
-	return &Robot{*ID, *name, points}, nil
+	return &Robot{ID, name, points}, nil
 }
 
 // GetSahpe returns a copy of the robots shape

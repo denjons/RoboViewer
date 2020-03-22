@@ -11,41 +11,35 @@ var (
 	ID   = "test_id"
 )
 
-func TestNewFloorNilName(t *testing.T) {
-	_, err := model.NewFloor(&ID, nil, 10, 10)
-
-	evalErrorMessage(err, "name cannot be nil", t)
-}
-
 func TestNewFloorEmptyName(t *testing.T) {
-	name := ""
-	_, err := model.NewFloor(&ID, &name, 10, 10)
+	_, err := model.NewFloor(ID, "", 10, 10)
 
 	evalErrorMessage(err, "name cannot be empty", t)
 }
 
-func TestNewFloorZeroWidth(t *testing.T) {
-	name := "living room"
+func TestNewFloorEmptyID(t *testing.T) {
+	_, err := model.NewFloor("", name, 10, 10)
 
-	_, err := model.NewFloor(&ID, &name, 0, 10)
+	evalErrorMessage(err, "ID cannot be empty", t)
+}
+
+func TestNewFloorZeroWidth(t *testing.T) {
+	_, err := model.NewFloor(ID, name, 0, 10)
 
 	evalErrorMessage(err, "width must be positive", t)
 }
 
 func TestNewFloorZeroHeight(t *testing.T) {
-	name := "living room"
-
-	_, err := model.NewFloor(&ID, &name, 10, 0)
+	_, err := model.NewFloor(ID, name, 10, 0)
 
 	evalErrorMessage(err, "height must be positive", t)
 }
 
 func TestNewFloor(t *testing.T) {
-	name := "living room"
 	width := 40
 	height := 30
 	size := width * height
-	floor, err := model.NewFloor(&ID, &name, width, height)
+	floor, err := model.NewFloor(ID, name, width, height)
 
 	if err != nil {
 		t.Errorf("NewFloor() got error %v", err)
@@ -67,7 +61,6 @@ func TestNewFloor(t *testing.T) {
 }
 
 func TestMarkPoint(t *testing.T) {
-
 	floor := createFloor(40, 30, t)
 
 	point := &model.Point{X: 1, Y: 1}
@@ -112,7 +105,7 @@ func TestGetCoveredAreaInPercentHalf(t *testing.T) {
 func TestMark(t *testing.T) {
 	robot := createRobot(4, 4, t)
 	floor := createFloor(8, 8, t)
-	err := floor.Mark(&model.Point{2, 2}, robot)
+	err := floor.Mark(model.Point{2, 2}, robot)
 
 	if err != nil {
 		t.Errorf("Mark() got error %v", err)
@@ -126,8 +119,7 @@ func TestMark(t *testing.T) {
 }
 
 func createRobot(width int, height int, t *testing.T) *model.Robot {
-	name := "square robot"
-	robot, err := model.NewRectangularRobot(&ID, &name, 4, 4)
+	robot, err := model.NewRectangularRobot(ID, name, 4, 4)
 
 	if err != nil {
 		t.Errorf("NewSqueareRobot() got error %v", err)
@@ -137,8 +129,7 @@ func createRobot(width int, height int, t *testing.T) *model.Robot {
 }
 
 func createFloor(width, height int, t *testing.T) *model.Floor {
-	name := "living room"
-	floor, err := model.NewFloor(&ID, &name, width, height)
+	floor, err := model.NewFloor(ID, name, width, height)
 
 	if err != nil {
 		t.Errorf("NewFloor() got error %v", err)

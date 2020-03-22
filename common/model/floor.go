@@ -13,21 +13,20 @@ type Floor struct {
 
 // Marker handles basic operations which can be made on a Floor
 type Marker interface {
-	Mark(p *Point, r *Robot) error
+	Mark(p Point, r *Robot) error
 	MarkPoint(point *Point) error
 	GetCoveredAreaInPercent() float32
 	Size() int
 }
 
 // NewFloor creates a new Floor
-func NewFloor(ID *string, name *string, width int, height int) (*Floor, error) {
+func NewFloor(ID string, name string, width int, height int) (*Floor, error) {
 
-	if name == nil {
-		return nil, errors.New("name cannot be nil")
-	}
-
-	if *name == "" {
+	if name == "" {
 		return nil, errors.New("name cannot be empty")
+	}
+	if ID == "" {
+		return nil, errors.New("ID cannot be empty")
 	}
 	if width <= 0 {
 		return nil, errors.New("width must be positive")
@@ -37,11 +36,11 @@ func NewFloor(ID *string, name *string, width int, height int) (*Floor, error) {
 	}
 	grid := make([]int, width*height)
 
-	return &Floor{*ID, *name, grid, width, 0}, nil
+	return &Floor{ID, name, grid, width, 0}, nil
 }
 
 // Mark the position of the robot on this floor
-func (floor *Floor) Mark(point *Point, robot *Robot) error {
+func (floor *Floor) Mark(point Point, robot *Robot) error {
 	shape := *robot.GetSahpe()
 	for i := range shape {
 		p := shape[i].Translate(point)
