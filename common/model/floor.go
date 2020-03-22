@@ -4,8 +4,9 @@ import "errors"
 
 // Floor represents a floor that can be cleaned
 type Floor struct {
-	Name        *string
-	grid        *[]int
+	ID          string
+	Name        string
+	grid        []int
 	width       int
 	coveredArea int
 }
@@ -19,7 +20,7 @@ type Marker interface {
 }
 
 // NewFloor creates a new Floor
-func NewFloor(name *string, width int, height int) (*Floor, error) {
+func NewFloor(ID *string, name *string, width int, height int) (*Floor, error) {
 
 	if name == nil {
 		return nil, errors.New("name cannot be nil")
@@ -36,7 +37,7 @@ func NewFloor(name *string, width int, height int) (*Floor, error) {
 	}
 	grid := make([]int, width*height)
 
-	return &Floor{name, &grid, width, 0}, nil
+	return &Floor{*ID, *name, grid, width, 0}, nil
 }
 
 // Mark the position of the robot on this floor
@@ -56,12 +57,12 @@ func (floor *Floor) Mark(point *Point, robot *Robot) error {
 func (floor *Floor) MarkPoint(point *Point) error {
 	pos := floor.width*point.Y + point.X
 
-	if pos >= len(*floor.grid) {
+	if pos >= len(floor.grid) {
 		return errors.New("point is outside of the floor grid")
 	}
 
-	if (*floor.grid)[pos] == 0 {
-		(*floor.grid)[pos] = 1
+	if (floor.grid)[pos] == 0 {
+		(floor.grid)[pos] = 1
 		floor.coveredArea++
 	}
 
@@ -70,10 +71,10 @@ func (floor *Floor) MarkPoint(point *Point) error {
 
 // GetCoveredAreaInPercent returns how much of the floor area that had been covered by a robot
 func (floor *Floor) GetCoveredAreaInPercent() float32 {
-	return 100.0 * (float32(floor.coveredArea) / float32(len(*floor.grid)))
+	return 100.0 * (float32(floor.coveredArea) / float32(len(floor.grid)))
 }
 
 //Size of the floor grid
 func (floor *Floor) Size() int {
-	return len(*floor.grid)
+	return len(floor.grid)
 }

@@ -5,7 +5,7 @@ type PositionUpdateEvent struct {
 	Sequence  int64
 	RobotID   string
 	SessionID string
-	Position  *Position
+	Position  Position
 }
 
 // Position is an internal representaion of a robots position
@@ -13,3 +13,5 @@ type Position struct {
 	X int32
 	Y int32
 }
+
+// TODO: func NewPositionUpdateEvent (*PositionUpdateEvent)

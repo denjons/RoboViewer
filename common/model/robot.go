@@ -9,12 +9,13 @@ type RobotShape interface {
 
 // Robot represents a rebot vacuum cleaner
 type Robot struct {
+	ID    string
 	Name  string
-	shape *[]Point
+	shape []Point
 }
 
 // NewRectangularRobot return s new robot in a square shape
-func NewRectangularRobot(name *string, width int, height int) (*Robot, error) {
+func NewRectangularRobot(ID *string, name *string, width int, height int) (*Robot, error) {
 
 	if name == nil {
 		return nil, errors.New("Robot name cannot be nil")
@@ -32,6 +33,14 @@ func NewRectangularRobot(name *string, width int, height int) (*Robot, error) {
 		return nil, errors.New("Robot height must be positive")
 	}
 
+	if ID == nil {
+		return nil, errors.New("Robot ID cannot be nil")
+	}
+
+	if *ID == "" {
+		return nil, errors.New("Robot ID cannot be empty")
+	}
+
 	points := make([]Point, width*height)
 	position := 0
 	for i := 0; i < width; i++ {
@@ -41,11 +50,11 @@ func NewRectangularRobot(name *string, width int, height int) (*Robot, error) {
 		}
 	}
 
-	return &Robot{*name, &points}, nil
+	return &Robot{*ID, *name, points}, nil
 }
 
 // GetSahpe returns a copy of the robots shape
 func (robot *Robot) GetSahpe() *[]Point {
-	points := *robot.shape
+	points := robot.shape
 	return &points
 }

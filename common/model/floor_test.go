@@ -6,16 +6,20 @@ import (
 	model "github.com/denjons/RoboViewer/common/model"
 )
 
+var (
+	name = "test_floor"
+	ID   = "test_id"
+)
+
 func TestNewFloorNilName(t *testing.T) {
-	_, err := model.NewFloor(nil, 10, 10)
+	_, err := model.NewFloor(&ID, nil, 10, 10)
 
 	evalErrorMessage(err, "name cannot be nil", t)
 }
 
 func TestNewFloorEmptyName(t *testing.T) {
 	name := ""
-
-	_, err := model.NewFloor(&name, 10, 10)
+	_, err := model.NewFloor(&ID, &name, 10, 10)
 
 	evalErrorMessage(err, "name cannot be empty", t)
 }
@@ -23,7 +27,7 @@ func TestNewFloorEmptyName(t *testing.T) {
 func TestNewFloorZeroWidth(t *testing.T) {
 	name := "living room"
 
-	_, err := model.NewFloor(&name, 0, 10)
+	_, err := model.NewFloor(&ID, &name, 0, 10)
 
 	evalErrorMessage(err, "width must be positive", t)
 }
@@ -31,7 +35,7 @@ func TestNewFloorZeroWidth(t *testing.T) {
 func TestNewFloorZeroHeight(t *testing.T) {
 	name := "living room"
 
-	_, err := model.NewFloor(&name, 10, 0)
+	_, err := model.NewFloor(&ID, &name, 10, 0)
 
 	evalErrorMessage(err, "height must be positive", t)
 }
@@ -41,7 +45,7 @@ func TestNewFloor(t *testing.T) {
 	width := 40
 	height := 30
 	size := width * height
-	floor, err := model.NewFloor(&name, width, height)
+	floor, err := model.NewFloor(&ID, &name, width, height)
 
 	if err != nil {
 		t.Errorf("NewFloor() got error %v", err)
@@ -123,7 +127,7 @@ func TestMark(t *testing.T) {
 
 func createRobot(width int, height int, t *testing.T) *model.Robot {
 	name := "square robot"
-	robot, err := model.NewRectangularRobot(&name, 4, 4)
+	robot, err := model.NewRectangularRobot(&ID, &name, 4, 4)
 
 	if err != nil {
 		t.Errorf("NewSqueareRobot() got error %v", err)
@@ -134,7 +138,7 @@ func createRobot(width int, height int, t *testing.T) *model.Robot {
 
 func createFloor(width, height int, t *testing.T) *model.Floor {
 	name := "living room"
-	floor, err := model.NewFloor(&name, width, height)
+	floor, err := model.NewFloor(&ID, &name, width, height)
 
 	if err != nil {
 		t.Errorf("NewFloor() got error %v", err)

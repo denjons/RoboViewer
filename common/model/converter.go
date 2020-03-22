@@ -10,6 +10,6 @@ func ConvertToPositionUpdateEvent(positionUpdate *pb.PositionUpdate) *PositionUp
 		Sequence:  positionUpdate.SequenceNumber.Value,
 		RobotID:   positionUpdate.RobotId.Value,
 		SessionID: positionUpdate.SessionId.Value,
-		Position:  &Position{X: positionUpdate.Position.X, Y: positionUpdate.Position.Y},
+		Position:  Position{X: positionUpdate.Position.X, Y: positionUpdate.Position.Y},
 	}
 }
