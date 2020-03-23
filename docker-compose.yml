@@ -17,3 +17,12 @@ services:
       - "2181:2181"
     environment:
       - KAFKA_ADVERTISED_HOST_NAME=zookeeper
+  postgres-db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: robot_service
+      POSTGRES_PASSWORD: robot_service
+      POSTGRES_DB: robot_service
+    ports:
+      - "5432:5432"
