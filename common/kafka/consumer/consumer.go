@@ -40,7 +40,7 @@ func NewKafkaConsumer(broker *string, group *string, topics *[]string) (*KafkaCo
 }
 
 // Start consuming on configured topics
-func (kc *KafkaConsumer) Start(consumerChannel chan *[]byte) {
+func (kc *KafkaConsumer) Start(consumerChannel chan []byte) {
 
 	err := kc.consumer.SubscribeTopics(*kc.Topics, nil)
 
@@ -68,7 +68,7 @@ func (kc *KafkaConsumer) Start(consumerChannel chan *[]byte) {
 				kc.consumer.Unassign()
 			case *kafka.Message:
 				log.Printf(" Message on %s", e.TopicPartition)
-				consumerChannel <- &e.Value
+				consumerChannel <- e.Value
 			case kafka.PartitionEOF:
 				log.Printf("Oartition EOF: %v", e)
 			case kafka.Error:

@@ -25,7 +25,7 @@ func main() {
 		log.Fatalf("Error %v", err)
 	}
 
-	channel := make(chan *[]byte)
+	channel := make(chan []byte)
 
 	go printMessages(channel)
 
@@ -33,8 +33,8 @@ func main() {
 
 }
 
-func printMessages(channel chan *[]byte) {
+func printMessages(channel chan []byte) {
 	for msg := range channel {
-		log.Printf("Received message: %v", string(*msg))
+		log.Printf("Received message: %v", string(msg))
 	}
 }
