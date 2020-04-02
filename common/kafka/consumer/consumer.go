@@ -20,10 +20,10 @@ type KafkaConsumer struct {
 }
 
 // NewKafkaConsumer creates a new consumer
-func NewKafkaConsumer(broker *string, group *string, topics *[]string) (*KafkaConsumer, error) {
+func NewKafkaConsumer(broker string, group string, topics *[]string) (*KafkaConsumer, error) {
 	c, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":               *broker,
-		"group.id":                        *group,
+		"bootstrap.servers":               broker,
+		"group.id":                        group,
 		"session.timeout.ms":              6000,
 		"go.events.channel.enable":        true,
 		"go.application.rebalance.enable": true,
@@ -36,7 +36,7 @@ func NewKafkaConsumer(broker *string, group *string, topics *[]string) (*KafkaCo
 		return nil, err
 	}
 
-	return &KafkaConsumer{topics, *broker, c}, nil
+	return &KafkaConsumer{topics, broker, c}, nil
 }
 
 // Start consuming on configured topics
