@@ -1,0 +1,7 @@
+CREATE TABLE Sessions (
+  id SERIAL PRIMARY KEY,
+  created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  robotId BIGINT REFERENCES Robots(id),
+  floorId BIGINT REFERENCES Floors(id),
+  updates INTEGER[] NOT NULL
+);
