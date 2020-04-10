@@ -13,7 +13,7 @@ CREATE TABLE Robots (
   created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   name VARCHAR(100) NOT NULL,
   width INTEGER NOT NULL,
-  grid INTEGER[] NOT NULL,
+  height INTEGER NOT NULL,
   floorId bigint REFERENCES Floors(id)
 );
 
