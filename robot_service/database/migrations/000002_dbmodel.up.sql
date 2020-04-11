@@ -7,8 +7,8 @@ CREATE TABLE Sessions (
 );
 
 CREATE TABLE Points (
-  sessionId INTEGER NOT NULL,
-  sequence INTEGER NOT NULL,
+  sessionId BIGINT NOT NULL,
+  sequence BIGINT NOT NULL,
   x INTEGER NOT NULL,
   y INTEGER NOT NULL,
   PRIMARY KEY(sessionId, sequence)
