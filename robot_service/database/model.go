@@ -8,7 +8,7 @@ type Robot struct {
 	Created string
 	Width   int
 	Height  int
-	floor   *Floor
+	Floor   *Floor
 }
 
 // RobotID is a uuid for a Robot
@@ -47,7 +47,7 @@ type SessionID struct {
 
 // Point represents an X,Y position on the floor grid
 type Point struct {
+	Sequence int64
 	X        int
 	Y        int
-	Sequence int64
 }
