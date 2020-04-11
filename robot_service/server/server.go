@@ -11,8 +11,8 @@ import (
 
 	c "github.com/denjons/RoboViewer/common/kafka/consumer"
 	common "github.com/denjons/RoboViewer/common/model"
-	"github.com/denjons/RoboViewer/robot_service/client/model"
-	"github.com/denjons/RoboViewer/robot_service/database"
+	client "github.com/denjons/RoboViewer/robot_service/client"
+	db "github.com/denjons/RoboViewer/robot_service/database"
 	kafka "github.com/denjons/RoboViewer/robot_service/kafka"
 )
 
@@ -31,18 +31,20 @@ func main() {
 	startKafkaListener()
 
 	log.Printf("Running database migrations")
-	if err := database.MigrateDatabase(*dbMigration, *dbURL); err != nil {
+	if err := db.MigrateDatabase(*dbMigration, *dbURL); err != nil {
 		log.Fatalf("Could not migrate database schema: %v", err)
 	}
 
 	log.Printf("Creating listeners")
+
 	http.HandleFunc("/floor/create", func(w http.ResponseWriter, r *http.Request) {
 		floorDTO, err := parseFloor(r)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Could not parse json body: %v", err), 400)
 		}
-		fmt.Printf("Got floor: %v", floorDTO)
+		log.Printf("Got floor: %v", floorDTO)
 		fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
+		//floor, err := converter.ConvertFloor(floorDTO)
 	})
 
 	http.HandleFunc("/robot/create", func(w http.ResponseWriter, r *http.Request) {
@@ -101,22 +103,22 @@ func getBytes(r *http.Request) (*[]byte, error) {
 	return &bytes, nil
 }
 
-func parseFloor(r *http.Request) (*model.FloorDTO, error) {
+func parseFloor(r *http.Request) (*client.FloorDTO, error) {
 	bytes, err := getBytes(r)
 	if err != nil {
 		return nil, err
 	}
-	floorDTO := model.FloorDTO{}
+	floorDTO := client.FloorDTO{}
 	json.Unmarshal(*bytes, &floorDTO)
 	return &floorDTO, nil
 }
 
-func parseRobot(r *http.Request) (*model.RobotDTO, error) {
+func parseRobot(r *http.Request) (*client.RobotDTO, error) {
 	bytes, err := getBytes(r)
 	if err != nil {
 		return nil, err
 	}
-	robotDTO := model.RobotDTO{}
+	robotDTO := client.RobotDTO{}
 	json.Unmarshal(*bytes, &robotDTO)
 
 	return &robotDTO, nil
