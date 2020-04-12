@@ -67,7 +67,6 @@ func (kc *KafkaConsumer) Start(consumerChannel chan []byte) {
 				log.Printf("Revoked partitions %v", e)
 				kc.consumer.Unassign()
 			case *kafka.Message:
-				log.Printf(" Message on %s", e.TopicPartition)
 				consumerChannel <- e.Value
 			case kafka.PartitionEOF:
 				log.Printf("Oartition EOF: %v", e)
