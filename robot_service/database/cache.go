@@ -3,6 +3,7 @@ package database
 import (
 	"errors"
 	"fmt"
+	"log"
 )
 
 // SessionCache handles high level database operations on Robot Sessions.
@@ -40,10 +41,14 @@ func (sc *SessionCache) getSession(sessionID *SessionID, robotID *RobotID) (*Ses
 		return session, nil
 	}
 
+	log.Printf("Could not find existing session for ID %v", sessionID.Value)
+
 	createErr := sc.createSessionForRobot(sessionID, robotID)
 	if createErr != nil {
 		return nil, createErr
 	}
+
+	log.Printf("Created new session with ID %v and robot %v", sessionID.Value, robotID.Value)
 
 	createdSession, err := sc.getExistingSession(sessionID)
 	if err != nil {
