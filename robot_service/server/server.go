@@ -1,19 +1,20 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"html"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
 
 	c "github.com/denjons/RoboViewer/common/kafka/consumer"
-	common "github.com/denjons/RoboViewer/common/model"
 	client "github.com/denjons/RoboViewer/robot_service/client"
 	db "github.com/denjons/RoboViewer/robot_service/database"
 	kafka "github.com/denjons/RoboViewer/robot_service/kafka"
+	service "github.com/denjons/RoboViewer/robot_service/service"
 )
 
 var (
@@ -28,7 +29,15 @@ var (
 
 func main() {
 
-	startKafkaListener()
+	parent := context.Background()
+	repository, err := db.NewRepository(parent, *dbURL)
+	if err != nil {
+		log.Fatalf("Could not create repository: %v", err)
+	}
+	defer repository.Stop()
+	sessionService := createSessionService(repository)
+	startKafkaListener(sessionService)
+	robotService := createRobotService(repository)
 
 	log.Printf("Running database migrations")
 	if err := db.MigrateDatabase(*dbMigration, *dbURL); err != nil {
@@ -40,43 +49,79 @@ func main() {
 	http.HandleFunc("/floor/create", func(w http.ResponseWriter, r *http.Request) {
 		floorDTO, err := parseFloor(r)
 		if err != nil {
+			log.Printf("Error: %v", err)
 			http.Error(w, fmt.Sprintf("Could not parse json body: %v", err), 400)
 		}
-		log.Printf("Got floor: %v", floorDTO)
-		fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
-		//floor, err := converter.ConvertFloor(floorDTO)
+
+		log.Printf("received create floor request: %v", floorDTO)
+
+		floorID, err := robotService.CreateFloor(floorDTO)
+
+		if err != nil {
+			log.Printf("Error: %v", err)
+			http.Error(w, fmt.Sprintf("Could not create Floor: %v", err), 500)
+		}
+
+		jsonRespone, err := json.Marshal(floorID)
+		if err != nil {
+			log.Printf("Error: %v", err)
+			http.Error(w, fmt.Sprintf("Could not parse Response: %v", err), 500)
+		}
+
+		w.Write(jsonRespone)
 	})
 
 	http.HandleFunc("/robot/create", func(w http.ResponseWriter, r *http.Request) {
 		robotDTO, err := parseRobot(r)
 
 		if err != nil {
+			log.Printf("Error: %v", err)
 			http.Error(w, fmt.Sprintf("Could not parse json body: %v", err), 400)
 		}
-		fmt.Printf("Got robot: %v", robotDTO)
-		fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
+
+		log.Printf("received create robot request: %v", robotDTO)
+
+		robotID, err := robotService.CreateRobot(robotDTO)
+
+		if err != nil {
+			log.Printf("Error: %v", err)
+			http.Error(w, fmt.Sprintf("Could not create Robot: %v", err), 500)
+		}
+
+		jsonRespone, err := json.Marshal(robotID)
+		if err != nil {
+			log.Printf("Error: %v", err)
+			http.Error(w, fmt.Sprintf("Could not parse Response: %v", err), 500)
+		}
+
+		w.Write(jsonRespone)
 	})
 
-	http.HandleFunc("/floor/set/robot", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/floor/map/robot", func(w http.ResponseWriter, r *http.Request) {
+		rfMap, err := parseRobotToFlooeMap(r)
 
-		robotIds, ok := r.URL.Query()["robot_id"]
-		if !ok || len(robotIds[0]) < 1 {
-			http.Error(w, "missing robot_id in request", 400)
+		if err != nil {
+			log.Printf("Error: %v", err)
+			http.Error(w, fmt.Sprintf("Could not parse json body: %v", err), 400)
 		}
 
-		floorIds, ok := r.URL.Query()["floor_id"]
-		if !ok || len(floorIds[0]) < 1 {
-			http.Error(w, "missing floor_id in request", 400)
+		log.Printf("received map robot to floor request: %v", rfMap)
+
+		mapErr := robotService.MapRobotToFloor(rfMap)
+
+		if mapErr != nil {
+			log.Printf("Error: %v", err)
+			http.Error(w, fmt.Sprintf("Could not map robot to floor %v", mapErr), 400)
 		}
 
-		fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
+		w.Write([]byte("OK"))
 	})
 
 	log.Printf("Serving on %v:%v", *serverHost, *serverPort)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("%v:%v", *serverHost, *serverPort), nil))
 }
 
-func startKafkaListener() {
+func startKafkaListener(service *service.SessionEventService) {
 	topics := strings.Split(*kafkaTopic, ",")
 	kafkaConsumer, err := c.NewKafkaConsumer(*kafkaHost, *kafkaGroupID, &topics)
 	if err != nil {
@@ -86,40 +131,59 @@ func startKafkaListener() {
 	if err != nil {
 		log.Fatalf("Error creating Listener: %v", err)
 	}
-	listener.ListenForPositionUpdateEvents(func(p *common.PositionUpdateEvent) {
-		log.Printf("Received message: %v", p)
-	})
+	listener.ListenForPositionUpdateEvents(service.HandlePositionUpdateEvent)
 }
 
-func getBytes(r *http.Request) (*[]byte, error) {
-	bytes := make([]byte, r.ContentLength)
-	size, err := r.Body.Read(bytes)
+func createSessionService(repository *db.Repository) *service.SessionEventService {
+	sessionCache, err := db.NewSessionCache(repository)
 	if err != nil {
-		return nil, err
+		log.Fatalf("Could not create SessionCache: %v", err)
 	}
-	if size < len(bytes) {
-		return nil, fmt.Errorf("Could only read %v out of %v bytes", size, r.ContentLength)
+
+	eventService, err := service.NewSessionEventService(sessionCache)
+	if err != nil {
+		log.Fatalf("Could not create SessionEventService: %v", err)
 	}
-	return &bytes, nil
+
+	return eventService
+}
+
+func createRobotService(repository *db.Repository) *service.RobotService {
+	service, err := service.NewRobotService(repository)
+	if err != nil {
+		log.Fatalf("Could not create RobotService: %v", err)
+	}
+	return service
 }
 
 func parseFloor(r *http.Request) (*client.FloorDTO, error) {
-	bytes, err := getBytes(r)
+	bytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
-	floorDTO := client.FloorDTO{}
-	json.Unmarshal(*bytes, &floorDTO)
-	return &floorDTO, nil
+	floorDTO := &client.FloorDTO{}
+	json.Unmarshal(bytes, floorDTO)
+	return floorDTO, nil
 }
 
 func parseRobot(r *http.Request) (*client.RobotDTO, error) {
-	bytes, err := getBytes(r)
+	bytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
-	robotDTO := client.RobotDTO{}
-	json.Unmarshal(*bytes, &robotDTO)
+	robotDTO := &client.RobotDTO{}
+	json.Unmarshal(bytes, robotDTO)
 
-	return &robotDTO, nil
+	return robotDTO, nil
+}
+
+func parseRobotToFlooeMap(r *http.Request) (*client.RobotToFloorMapDTO, error) {
+	bytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+	rfMap := &client.RobotToFloorMapDTO{}
+	json.Unmarshal(bytes, rfMap)
+
+	return rfMap, nil
 }

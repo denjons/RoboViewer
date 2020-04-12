@@ -1,29 +1,34 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"flag"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"time"
 
 	pb "github.com/denjons/RoboViewer/common/grpc/positionreport"
+	rsClient "github.com/denjons/RoboViewer/robot_service/client"
+	uuid "github.com/satori/go.uuid"
 	"google.golang.org/grpc"
 )
 
 var (
-	serverHost = flag.String("server.host", "localhost:50001", "server bind host.")
-	updates    = []*pb.PositionUpdate{
-		{SequenceNumber: &pb.SequenceNumber{Count: 1}, Position: &pb.Position{X: 1, Y: 1}, RobotId: &pb.RobotId{Id: 1}, SessionId: &pb.SessionId{Id: 1}},
-		{SequenceNumber: &pb.SequenceNumber{Count: 2}, Position: &pb.Position{X: 2, Y: 1}, RobotId: &pb.RobotId{Id: 1}, SessionId: &pb.SessionId{Id: 1}},
-		{SequenceNumber: &pb.SequenceNumber{Count: 3}, Position: &pb.Position{X: 2, Y: 2}, RobotId: &pb.RobotId{Id: 1}, SessionId: &pb.SessionId{Id: 1}},
-		{SequenceNumber: &pb.SequenceNumber{Count: 4}, Position: &pb.Position{X: 3, Y: 2}, RobotId: &pb.RobotId{Id: 1}, SessionId: &pb.SessionId{Id: 1}},
-		{SequenceNumber: &pb.SequenceNumber{Count: 5}, Position: &pb.Position{X: 4, Y: 2}, RobotId: &pb.RobotId{Id: 1}, SessionId: &pb.SessionId{Id: 1}},
-	}
+	grpcHost = flag.String("grpc.host", "localhost:50001", "grpc bind host.")
+	httpHost = flag.String("http.host", "http://localhost:8080", "http bind host")
 )
 
 func main() {
 
-	conn, err := grpc.Dial(*serverHost, grpc.WithInsecure(), grpc.WithBlock())
+	robotID := createRobot("test robot", 4, 4)
+	floorID := createFloor("test floor", 10, make([]int, 100))
+
+	mapRobotToFloor(robotID, floorID)
+
+	conn, err := grpc.Dial(*grpcHost, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -42,8 +47,10 @@ func main() {
 
 	log.Println("sending position updates")
 
+	sessionID := uuid.NewV1().String()
 	for i := int32(1); i <= 1000; i++ {
-		value := &pb.PositionUpdate{SequenceNumber: &pb.SequenceNumber{Count: 1}, Position: &pb.Position{X: i, Y: (i + 1)}, RobotId: &pb.RobotId{Id: 1}, SessionId: &pb.SessionId{Id: 1}}
+		value := &pb.PositionUpdate{SequenceNumber: &pb.SequenceNumber{Value: 1}, Position: &pb.Position{X: i, Y: (i + 1)},
+			RobotId: &pb.RobotId{Value: robotID.Value}, SessionId: &pb.SessionId{Value: sessionID}}
 		if sendErr := stream.Send(value); sendErr != nil {
 			log.Fatalf("Failed to send a update: %v", err)
 		}
@@ -58,4 +65,69 @@ func main() {
 	}
 
 	log.Printf("Report Responde: %v", reply)
+}
+
+func createRobot(name string, width int, height int) *rsClient.RobotID {
+	robotDTO := &rsClient.RobotDTO{Name: name, Width: width, Height: height}
+
+	robotJSON, err := json.Marshal(robotDTO)
+
+	if err != nil {
+		log.Fatalf("Could not parse robot request %v", err)
+	}
+
+	bytes := post(&robotJSON, "/robot/create")
+
+	robotID := &rsClient.RobotID{}
+	json.Unmarshal(bytes, robotID)
+
+	return robotID
+}
+
+func mapRobotToFloor(robotID *rsClient.RobotID, floorID *rsClient.FloorID) {
+	rfMap := &rsClient.RobotToFloorMapDTO{RobotID: *robotID, FloorID: *floorID}
+
+	rfMapJSON, err := json.Marshal(rfMap)
+
+	if err != nil {
+		log.Fatalf("Could not parse robot request %v", err)
+	}
+
+	post(&rfMapJSON, "/floor/map/robot")
+}
+
+func createFloor(name string, width int, grid []int) *rsClient.FloorID {
+	floorDTO := &rsClient.FloorDTO{Name: name, Width: width, Grid: grid}
+
+	floorJSON, err := json.Marshal(floorDTO)
+
+	if err != nil {
+		log.Fatalf("Could not parse robot request %v", err)
+	}
+
+	bytes := post(&floorJSON, "/floor/create")
+
+	floorID := &rsClient.FloorID{}
+	json.Unmarshal(bytes, floorID)
+
+	return floorID
+}
+
+func post(request *[]byte, path string) []byte {
+	response, err := http.Post(*httpHost+path, "application/json", bytes.NewBuffer(*request))
+
+	if err != nil {
+		log.Fatalf("Could not send robot request %v", err)
+	}
+
+	if response.StatusCode != 200 {
+		log.Fatalf("Got response %v", response.StatusCode)
+	}
+
+	bytes, err := ioutil.ReadAll(response.Body)
+
+	if err != nil {
+		log.Fatalf("Could read response bytes %v", err)
+	}
+	return bytes
 }

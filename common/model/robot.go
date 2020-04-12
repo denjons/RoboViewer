@@ -42,11 +42,20 @@ func NewRectangularRobot(ID string, name string, width int, height int) (*Robot,
 		}
 	}
 
-	return &Robot{ID, name, points}, nil
+	return &Robot{ID: ID, Name: name, shape: points}, nil
 }
 
 // GetSahpe returns a copy of the robots shape
 func (robot *Robot) GetSahpe() *[]Point {
 	points := robot.shape
 	return &points
+}
+
+func (robot *Robot) shateToArray() *[]int {
+	array := make([]int, len(robot.shape)*2)
+	for i := 0; i < len(robot.shape); i += 2 {
+		array[i] = robot.shape[i].X
+		array[i+1] = robot.shape[i].Y
+	}
+	return &array
 }
