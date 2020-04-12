@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/google/uuid"
+	_ "github.com/lib/pq"
 )
 
 // RobotRepositoryWriter handles databse write actions on Robots and floors
@@ -26,13 +28,30 @@ type SessionRepository interface {
 
 // Repository represents a repository
 type Repository struct {
-	ctx context.Context
-	db  *sql.DB
+	ctx         context.Context
+	stopChannel context.CancelFunc
+	db          *sql.DB
+}
+
+// NewRepository return a new Repository that is connected
+func NewRepository(parent context.Context, DSN string) (*Repository, error) {
+	db, err := sql.Open("postgres", DSN)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithCancel(parent)
+	return &Repository{db: db, ctx: ctx, stopChannel: cancel}, nil
+}
+
+// Stop stops all connections
+func (r *Repository) Stop() {
+	r.db.Close()
+	r.stopChannel()
 }
 
 // CreateSession creates a new session
 func (r *Repository) CreateSession(sessionID *SessionID, robot *Robot, floor *Floor) error {
-	stmt, err := r.db.Prepare("INSERT INTO sessions(uuid, robotid, floorid) VALUES( ?, ?, ?)")
+	stmt, err := r.db.Prepare("INSERT INTO sessions(uuid, robotid, floorid) VALUES( $1, $2, $3)")
 
 	if err != nil {
 		return err
@@ -43,7 +62,10 @@ func (r *Repository) CreateSession(sessionID *SessionID, robot *Robot, floor *Fl
 	return execErr
 }
 
-// GetSession gets a session from the database
+/*
+GetSession gets a session from the database
+If an error occurs error is returned.
+*/
 func (r *Repository) GetSession(sessionID *SessionID) (*Session, error) {
 	var ID, robotID, floorID int
 	var robotWidth, robotHeight, floorWidth int
@@ -100,11 +122,14 @@ func (r *Repository) GetRobot(robotID *RobotID) (*Robot, error) {
 
 // InsertPosition insert a posiiton update into the database
 func (r *Repository) InsertPosition(session *Session, point *Point) error {
-	stmt, err := r.db.Prepare("INSERT INTO points(sessionid, sequence, x, y, ) VALUES( ?, ?, ?, ? )")
+	stmt, err := r.db.Prepare("INSERT INTO points(sessionid, sequence, x, y, ) VALUES($1, $2, $3, $4)")
 
 	if err != nil {
 		return err
 	}
+
+	defer stmt.Close()
+
 	_, execErr := stmt.Exec(session.ID.Value, point.Sequence, point.X, point.Y)
 
 	return execErr
@@ -114,16 +139,19 @@ func (r *Repository) InsertPosition(session *Session, point *Point) error {
 func (r *Repository) CreateRobot(name string, width int, height int) (*RobotID, error) {
 
 	id, err := uuid.NewUUID()
+	log.Printf("Creating robot with ID: %v", id)
 
 	if err != nil {
 		return nil, err
 	}
 
-	stmt, err := r.db.Prepare("INSERT INTO robots(uuid, name, width, height) VALUES( ?, ?, ?, ? )")
+	stmt, err := r.db.Prepare("INSERT INTO robots(uuid, name, width, height) VALUES($1, $2, $3, $4)")
 
 	if err != nil {
 		return nil, err
 	}
+
+	defer stmt.Close()
 
 	_, execErr := stmt.Exec(id.String(), name, width, height)
 
@@ -143,13 +171,15 @@ func (r *Repository) CreateFloor(name string, width int, grid *[]int) (*FloorID,
 		return nil, err
 	}
 
-	stmt, err := r.db.Prepare("INSERT INTO floors(uuid, name, width, grid) VALUES( ?, ?, ?, ? )")
+	stmt, err := r.db.Prepare("INSERT INTO floors(uuid, name, width, grid) VALUES($1, $2, $3, $4)")
 
 	if err != nil {
 		return nil, err
 	}
 
-	array := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(&grid)), ", "), "[]")
+	defer stmt.Close()
+
+	array := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(*grid)), ", "), "[]")
 
 	_, execErr := stmt.Exec(id.String(), name, width, "{"+array+"}")
 
@@ -161,36 +191,14 @@ func (r *Repository) CreateFloor(name string, width int, grid *[]int) (*FloorID,
 }
 
 // MapRobotToFloor maps a robot to a floor
-func (r *Repository) MapRobotToFloor(robot *Robot, floor *Floor) error {
-	stmt, err := r.db.Prepare("UPDATE Robots SET floorId = ? WHERE id ?")
+func (r *Repository) MapRobotToFloor(robotID *RobotID, floorID *FloorID) error {
+	stmt, err := r.db.Prepare("UPDATE Robots SET floorId = (SELECT id FROM floors where uuid = $1) WHERE uuid = $2")
 
 	if err != nil {
 		return err
 	}
 
-	_, execErr := stmt.Exec(floor.id, robot.id)
+	_, execErr := stmt.Exec(robotID.Value, floorID.Value)
 
 	return execErr
-}
-
-func (r *Repository) executeInTransaction(query string, args ...interface{}) (*sql.Result, error) {
-	tx, err := r.db.BeginTx(r.ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
-
-	if err != nil {
-		return nil, err
-	}
-
-	result, execErr := tx.Exec(query, args)
-
-	if execErr != nil {
-		_ = tx.Rollback()
-		return nil, execErr
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
-
 }

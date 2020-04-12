@@ -48,6 +48,6 @@ type SessionID struct {
 // Point represents an X,Y position on the floor grid
 type Point struct {
 	Sequence int64
-	X        int
-	Y        int
+	X        int32
+	Y        int32
 }
