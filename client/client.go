@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	pb "github.com/denjons/RoboViewer/common/grpc/positionreport"
+	pb "github.com/denjons/RoboViewer/robot_gateway/client/grpc/positionreport"
 	rsClient "github.com/denjons/RoboViewer/robot_service/client"
 	uuid "github.com/satori/go.uuid"
 	"google.golang.org/grpc"

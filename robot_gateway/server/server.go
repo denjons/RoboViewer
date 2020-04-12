@@ -7,9 +7,9 @@ import (
 	"log"
 	"net"
 
-	pb "github.com/denjons/RoboViewer/common/grpc/positionreport"
 	pr "github.com/denjons/RoboViewer/common/kafka/producer"
-	model "github.com/denjons/RoboViewer/common/model"
+	rgClient "github.com/denjons/RoboViewer/robot_gateway/client"
+	pb "github.com/denjons/RoboViewer/robot_gateway/client/grpc/positionreport"
 	ev "github.com/denjons/RoboViewer/robot_gateway/event"
 	"google.golang.org/grpc"
 )
@@ -41,7 +41,7 @@ func (s *server) ReportPosition(stream pb.PositionReport_ReportPositionServer) e
 
 		log.Printf("Received position X: %v, Y: %v", positionUpdate.Position.X, positionUpdate.Position.Y)
 
-		evErr := s.Handler.HandleEvent(model.ConvertToPositionUpdateEvent(positionUpdate))
+		evErr := s.Handler.HandleEvent(rgClient.ConvertToPositionUpdateEvent(positionUpdate))
 		if evErr != nil {
 			return evErr
 		}

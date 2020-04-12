@@ -3,7 +3,7 @@ package service
 import (
 	"errors"
 
-	model "github.com/denjons/RoboViewer/common/model"
+	kafka "github.com/denjons/RoboViewer/robot_gateway/client/kafka"
 	db "github.com/denjons/RoboViewer/robot_service/database"
 )
 
@@ -21,7 +21,7 @@ func NewSessionEventService(sessionCache *db.SessionCache) (*SessionEventService
 }
 
 // HandlePositionUpdateEvent handles incoming position update evenets
-func (s *SessionEventService) HandlePositionUpdateEvent(event *model.PositionUpdateEvent) {
+func (s *SessionEventService) HandlePositionUpdateEvent(event *kafka.PositionUpdateEvent) {
 	sessionID := &db.SessionID{Value: event.SessionID}
 	robotID := &db.RobotID{Value: event.RobotID}
 	point := &db.Point{Sequence: event.Sequence, X: event.Position.X, Y: event.Position.Y}

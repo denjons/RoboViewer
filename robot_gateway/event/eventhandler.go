@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/denjons/RoboViewer/common/kafka/producer"
-	ps "github.com/denjons/RoboViewer/common/model"
+	ps "github.com/denjons/RoboViewer/robot_gateway/client/kafka"
 )
 
 // EventHandler handles incoming events

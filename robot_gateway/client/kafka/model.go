@@ -1,4 +1,4 @@
-package model
+package kafka
 
 // PositionUpdateEvent is an internal represeantion of an position update from a robot
 type PositionUpdateEvent struct {
@@ -13,5 +13,3 @@ type Position struct {
 	X int32
 	Y int32
 }
-
-// TODO: func NewPositionUpdateEvent (*PositionUpdateEvent)
