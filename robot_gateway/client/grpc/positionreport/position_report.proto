@@ -8,6 +8,22 @@ package positionreport;
 
 service PositionReport { 
     rpc ReportPosition(stream PositionUpdate) returns (PositionUpdateResponse) {}
+    rpc ReportSession(SessionUpdate) returns (SessionUpdateResponse) {}
+}
+
+message SessionUpdate {
+  SessionId sessionId = 1;
+  SessionState sessionState = 2;
+}
+
+enum SessionState {
+  STARTED = 0;
+  FINISHED = 1;
+}
+
+message SessionUpdateResponse {
+  ResponseStatus responseStatus = 1;
+  string statusMessage = 2;
 }
 
 message PositionUpdate {
