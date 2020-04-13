@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 )
 
@@ -50,14 +51,15 @@ func (r *Repository) Stop() {
 }
 
 // CreateSession creates a new session
-func (r *Repository) CreateSession(sessionID *SessionID, robot *Robot, floor *Floor) error {
-	stmt, err := r.db.Prepare("INSERT INTO sessions(uuid, robotid, floorid) VALUES( $1, $2, $3)")
+func (r *Repository) CreateSession(sessionID *SessionID, robotID *RobotID) error {
+
+	stmt, err := r.db.Prepare("INSERT INTO sessions(uuid, robotid, floorid) VALUES( $1, (SELECT id FROM robots WHERE uuid = $2), (SELECT floorid FROM robots WHERE uuid = $2))")
 
 	if err != nil {
 		return err
 	}
 
-	_, execErr := stmt.Exec(sessionID.Value, robot.id, floor.id)
+	_, execErr := stmt.Exec(sessionID.Value, robotID.Value)
 
 	return execErr
 }
@@ -70,7 +72,7 @@ func (r *Repository) GetSession(sessionID *SessionID) (*Session, error) {
 	var ID, robotID, floorID int
 	var robotWidth, robotHeight, floorWidth int
 	var sessionUUID, robotUUID, floorUUID, sessionCreated, robotCreated, floorCreated, robotName, floorName string
-	var floorGrid []int
+	var floorGrid pq.Int64Array
 
 	err := r.db.QueryRowContext(r.ctx, `SELECT s.id as session_id, s.uuid as session_uuid, s.created as session_created, 
 	r.id as robot_id, r.uuid as robot_uuid, r.created as robot_created, r.name as robot_name, r.width as robot_width, r.height as robot_height,
@@ -82,6 +84,7 @@ func (r *Repository) GetSession(sessionID *SessionID) (*Session, error) {
 		&ID, &sessionUUID, &sessionCreated,
 		&robotID, &robotUUID, &robotCreated, &robotName, &robotWidth, &robotHeight,
 		&floorID, &floorUUID, &floorCreated, &floorName, &floorWidth, &floorGrid)
+
 	switch {
 	case err == sql.ErrNoRows:
 		return nil, nil
@@ -89,7 +92,7 @@ func (r *Repository) GetSession(sessionID *SessionID) (*Session, error) {
 		return nil, err
 	default:
 		robot := &Robot{id: robotID, ID: RobotID{robotUUID}, Created: robotCreated, Name: robotName, Width: robotWidth}
-		floor := &Floor{id: floorID, ID: FloorID{floorUUID}, Created: floorCreated, Name: floorName, Width: floorWidth, Grid: floorGrid}
+		floor := &Floor{id: floorID, ID: FloorID{floorUUID}, Created: floorCreated, Name: floorName, Width: floorWidth, Grid: parseGrid(floorGrid)}
 		return &Session{id: ID, ID: *sessionID, Created: sessionCreated, Robot: robot, Floor: floor}, nil
 	}
 }
@@ -99,7 +102,7 @@ func (r *Repository) GetRobot(robotID *RobotID) (*Robot, error) {
 	var ID, floorID int
 	var robotWidth, robotHeight, floorWidth int
 	var robotUUID, floorUUID, robotCreated, floorCreated, robotName, floorName string
-	var floorGrid []int
+	var floorGrid pq.Int64Array
 
 	err := r.db.QueryRowContext(r.ctx, `SELECT 
 	r.id as robot_id, r.uuid as robot_uuid, r.created as robot_created, r.name as robot_name, r.width as robot_width, r.height as robot_height,
@@ -109,20 +112,30 @@ func (r *Repository) GetRobot(robotID *RobotID) (*Robot, error) {
 	WHERE r.uuid=$1`, robotID.Value).Scan(
 		&ID, &robotUUID, &robotCreated, &robotName, &robotWidth, &robotHeight,
 		&floorID, &floorUUID, &floorCreated, &floorName, &floorWidth, &floorGrid)
+
 	switch {
 	case err == sql.ErrNoRows:
 		return nil, nil
 	case err != nil:
 		return nil, err
 	default:
-		floor := &Floor{id: floorID, ID: FloorID{floorUUID}, Created: floorCreated, Name: floorName, Width: floorWidth, Grid: floorGrid}
+		floor := &Floor{id: floorID, ID: FloorID{floorUUID}, Created: floorCreated, Name: floorName, Width: floorWidth, Grid: parseGrid(floorGrid)}
 		return &Robot{id: ID, ID: RobotID{robotUUID}, Created: robotCreated, Name: robotName, Width: robotWidth, Floor: floor}, nil
 	}
 }
 
+func parseGrid(sqlGrid pq.Int64Array) []int {
+	grid := make([]int, len(sqlGrid))
+
+	for i := range grid {
+		grid[i] = int(sqlGrid[i])
+	}
+	return grid
+}
+
 // InsertPosition insert a posiiton update into the database
 func (r *Repository) InsertPosition(session *Session, point *Point) error {
-	stmt, err := r.db.Prepare("INSERT INTO points(sessionid, sequence, x, y, ) VALUES($1, $2, $3, $4)")
+	stmt, err := r.db.Prepare("INSERT INTO points(sessionid, sequence, x, y) VALUES($1, $2, $3, $4)")
 
 	if err != nil {
 		return err
@@ -130,7 +143,7 @@ func (r *Repository) InsertPosition(session *Session, point *Point) error {
 
 	defer stmt.Close()
 
-	_, execErr := stmt.Exec(session.ID.Value, point.Sequence, point.X, point.Y)
+	_, execErr := stmt.Exec(session.id, point.Sequence, point.X, point.Y)
 
 	return execErr
 }
@@ -192,7 +205,7 @@ func (r *Repository) CreateFloor(name string, width int, grid *[]int) (*FloorID,
 
 // MapRobotToFloor maps a robot to a floor
 func (r *Repository) MapRobotToFloor(robotID *RobotID, floorID *FloorID) error {
-	stmt, err := r.db.Prepare("UPDATE Robots SET floorId = (SELECT id FROM floors where uuid = $1) WHERE uuid = $2")
+	stmt, err := r.db.Prepare("UPDATE Robots SET floorId = (SELECT id FROM floors where uuid = $2) WHERE uuid = $1")
 
 	if err != nil {
 		return err

@@ -43,7 +43,7 @@ func (sc *SessionCache) getSession(sessionID *SessionID, robotID *RobotID) (*Ses
 
 	log.Printf("Could not find existing session for ID %v", sessionID.Value)
 
-	createErr := sc.createSessionForRobot(sessionID, robotID)
+	createErr := sc.repository.CreateSession(sessionID, robotID)
 	if createErr != nil {
 		return nil, createErr
 	}
@@ -78,15 +78,4 @@ func (sc *SessionCache) getExistingSession(sessionID *SessionID) (*Session, erro
 	sc.cache[sessionID.Value] = *session
 
 	return session, nil
-}
-
-func (sc *SessionCache) createSessionForRobot(sessionID *SessionID, robotID *RobotID) error {
-	robot, err := sc.repository.GetRobot(robotID)
-	if err != nil {
-		return err
-	}
-	if robot == nil {
-		return fmt.Errorf("Robot with ID '%v' does not exists", robotID.Value)
-	}
-	return sc.repository.CreateSession(sessionID, robot, robot.Floor)
 }
