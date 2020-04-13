@@ -30,7 +30,7 @@ func (s *server) ReportPosition(stream pb.PositionReport_ReportPositionServer) e
 	for {
 		positionUpdate, err := stream.Recv()
 		if err == io.EOF {
-			return stream.SendAndClose(&pb.PeportResponse{
+			return stream.SendAndClose(&pb.PositionUpdateResponse{
 				ResponseStatus: pb.ResponseStatus_OK,
 				StatusMessage:  "Received position updates",
 			})

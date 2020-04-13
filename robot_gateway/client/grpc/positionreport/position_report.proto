@@ -7,7 +7,7 @@ option java_outer_classname = "PositionReportProto";
 package positionreport;
 
 service PositionReport { 
-    rpc ReportPosition(stream PositionUpdate) returns (PeportResponse) {}
+    rpc ReportPosition(stream PositionUpdate) returns (PositionUpdateResponse) {}
 }
 
 message PositionUpdate {
@@ -17,7 +17,7 @@ message PositionUpdate {
     SessionId sessionId = 4;
 }
 
-message PeportResponse {
+message PositionUpdateResponse {
     ResponseStatus responseStatus = 1;
     string statusMessage = 2;
 }
