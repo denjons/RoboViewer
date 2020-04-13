@@ -17,17 +17,33 @@ import (
 )
 
 var (
-	grpcHost = flag.String("grpc.host", "localhost:50001", "grpc bind host.")
-	httpHost = flag.String("http.host", "http://localhost:8080", "http bind host")
+	grpcHost  = flag.String("grpc.host", "localhost:50001", "grpc bind host.")
+	httpHost  = flag.String("http.host", "http://localhost:8080", "http bind host")
+	ierations = flag.Int("iterations", 100, "the amount of postion updates requests")
+	load      = flag.Int("load", 10, "the amount of postion updates per request")
 )
 
 func main() {
 
 	robotID := createRobot("test robot", 4, 4)
 	floorID := createFloor("test floor", 10, make([]int, 100))
-
 	mapRobotToFloor(robotID, floorID)
 
+	sessionID := uuid.NewV1().String()
+
+	positions := make([]pb.PositionUpdate, *load)
+
+	for i := 0; i <= (*ierations)*(*load); i++ {
+		if i > 0 && i%(*load) == 0 {
+			reportPositions(positions)
+		}
+		positions[i%(*load)] = pb.PositionUpdate{SequenceNumber: &pb.SequenceNumber{Value: int64(i + 1)}, Position: &pb.Position{X: int32(i), Y: int32(i + 1)},
+			RobotId: &pb.RobotId{Value: robotID.Value}, SessionId: &pb.SessionId{Value: sessionID}}
+	}
+
+}
+
+func reportPositions(updates []pb.PositionUpdate) {
 	conn, err := grpc.Dial(*grpcHost, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
@@ -36,7 +52,7 @@ func main() {
 
 	client := pb.NewPositionReportClient(conn)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(4)*time.Second)
 	defer cancel()
 
 	stream, StreamErr := client.ReportPosition(ctx)
@@ -47,11 +63,8 @@ func main() {
 
 	log.Println("sending position updates")
 
-	sessionID := uuid.NewV1().String()
-	for i := int32(1); i <= 1000; i++ {
-		value := &pb.PositionUpdate{SequenceNumber: &pb.SequenceNumber{Value: int64(i)}, Position: &pb.Position{X: i, Y: (i + 1)},
-			RobotId: &pb.RobotId{Value: robotID.Value}, SessionId: &pb.SessionId{Value: sessionID}}
-		if sendErr := stream.Send(value); sendErr != nil {
+	for i := range updates {
+		if sendErr := stream.Send(&updates[i]); sendErr != nil {
 			log.Fatalf("Failed to send a update: %v", err)
 		}
 	}
