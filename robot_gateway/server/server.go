@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -8,7 +9,7 @@ import (
 	"net"
 
 	pr "github.com/denjons/RoboViewer/common/kafka/producer"
-	rgClient "github.com/denjons/RoboViewer/robot_gateway/client"
+	"github.com/denjons/RoboViewer/robot_gateway/client/grpc/positionreport"
 	pb "github.com/denjons/RoboViewer/robot_gateway/client/grpc/positionreport"
 	ev "github.com/denjons/RoboViewer/robot_gateway/event"
 	"google.golang.org/grpc"
@@ -18,7 +19,6 @@ var (
 	serverPort = flag.Int("server.port", 50001, "Server bind port.")
 	serverHost = flag.String("server.host", "localhost", "server bind host.")
 	kafkaHost  = flag.String("kafka.host", "localhost", "broker host")
-	kafkaTopic = flag.String("kafka.topic", "position-events", "Topic for postion events")
 )
 
 type server struct {
@@ -41,27 +41,29 @@ func (s *server) ReportPosition(stream pb.PositionReport_ReportPositionServer) e
 
 		log.Printf("Received position X: %v, Y: %v", positionUpdate.Position.X, positionUpdate.Position.Y)
 
-		evErr := s.Handler.HandleEvent(rgClient.ConvertToPositionUpdateEvent(positionUpdate))
+		evErr := s.Handler.HandlePositionUpdate(positionUpdate)
 		if evErr != nil {
 			return evErr
 		}
 	}
 }
 
-func createEventHandler() *ev.KafkaEventHandler {
-	kafkaProducer, err := pr.NewKafkaProducer(*kafkaHost, *kafkaTopic)
+func (s *server) ReportSession(context.Context, *positionreport.SessionUpdate) (*positionreport.SessionUpdateResponse, error) {
+	return nil, nil
+}
+
+func main() {
+	flag.Parse()
+
+	kafkaProducer, err := pr.NewKafkaProducer(*kafkaHost)
 
 	if err != nil {
 		log.Fatalf("Failed to start producer: %v", err)
 	}
 
+	defer kafkaProducer.Close()
+
 	handler := ev.NewEventHandler(kafkaProducer)
-
-	return handler
-}
-
-func main() {
-	flag.Parse()
 
 	var hostPort = fmt.Sprintf("%s:%d", *serverHost, *serverPort)
 
@@ -71,8 +73,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to bind server: %v", err)
 	}
-
-	handler := createEventHandler()
 
 	s := grpc.NewServer()
 	pb.RegisterPositionReportServer(s, &server{Handler: handler})

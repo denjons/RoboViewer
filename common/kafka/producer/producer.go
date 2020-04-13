@@ -12,42 +12,40 @@ type Producer interface {
 	Start() error
 }
 
+// KafkaMessage a message to be sent a Kafka topic
+type KafkaMessage struct {
+	Topic   string
+	Payload []byte
+}
+
 // KafkaProducer for the Kafka broker
 type KafkaProducer struct {
-	Topic    string
 	Broker   string
 	Producer *kafka.Producer
 }
 
 // NewKafkaProducer creates a new KafkaProducer
-func NewKafkaProducer(broker, topic string) (*KafkaProducer, error) {
+func NewKafkaProducer(broker string) (*KafkaProducer, error) {
 	producer, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": broker})
 
 	if err != nil {
 		return nil, err
 	}
 
-	p := &KafkaProducer{}
-	p.Producer = producer
-	p.Broker = broker
-	p.Topic = topic
-
-	return p, nil
+	return &KafkaProducer{Broker: broker, Producer: producer}, nil
 }
 
-// Listen to events from given channel and put them on Kafka topic
-func (kp *KafkaProducer) Listen(eventChannel chan *[]byte) error {
+// Publish events to a kafka topic
+func (kp *KafkaProducer) Publish(kafkaMessage *KafkaMessage) {
+	doneChan := make(chan bool)
+	deferCloseProducer(kp.Producer, doneChan)
+	kp.Producer.ProduceChannel() <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: &kafkaMessage.Topic, Partition: kafka.PartitionAny}, Value: kafkaMessage.Payload}
+	_ = <-doneChan
+}
 
-	for value := range eventChannel {
-		doneChan := make(chan bool)
-		deferCloseProducer(kp.Producer, doneChan)
-		kp.Producer.ProduceChannel() <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: &kp.Topic, Partition: kafka.PartitionAny}, Value: *value}
-		_ = <-doneChan
-	}
-
+// Close the producer
+func (kp *KafkaProducer) Close() {
 	kp.Producer.Close()
-
-	return nil
 }
 
 func deferCloseProducer(producer *kafka.Producer, doneChan chan bool) {

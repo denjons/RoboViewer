@@ -2,52 +2,41 @@ package eventhandler
 
 import (
 	"encoding/json"
-	"log"
 
-	"github.com/denjons/RoboViewer/common/kafka/producer"
-	ps "github.com/denjons/RoboViewer/robot_gateway/client/kafka"
+	kafka "github.com/denjons/RoboViewer/common/kafka/producer"
+	client "github.com/denjons/RoboViewer/robot_gateway/client"
+	grpcClient "github.com/denjons/RoboViewer/robot_gateway/client/grpc/positionreport"
+	kafkaClient "github.com/denjons/RoboViewer/robot_gateway/client/kafka"
 )
 
 // EventHandler handles incoming events
 type EventHandler interface {
-	HandleEvent(event ps.PositionUpdateEvent)
+	HandleEvent(event kafkaClient.PositionUpdateEvent)
 	Close()
 }
 
 // KafkaEventHandler handles events and forwards them to the correct destination
 type KafkaEventHandler struct {
-	Producer        *producer.KafkaProducer
-	producerChannel chan *[]byte
+	producer *kafka.KafkaProducer
 }
 
 // NewEventHandler creates a new event eventhandler
-func NewEventHandler(eventProducer *producer.KafkaProducer) *KafkaEventHandler {
-	handler := &KafkaEventHandler{}
-	handler.producerChannel = make(chan *[]byte)
-	handler.Producer = eventProducer
-	go func() {
-		err := handler.Producer.Listen(handler.producerChannel)
-		if err != nil {
-			log.Fatalf("Could not start Kafka producer: %v", err)
-		}
-	}()
-	return handler
+func NewEventHandler(kafkaProducer *kafka.KafkaProducer) *KafkaEventHandler {
+	return &KafkaEventHandler{producer: kafkaProducer}
 }
 
-// HandleEvent handles the event and forwards it to it's next destination
-func (handler *KafkaEventHandler) HandleEvent(event *ps.PositionUpdateEvent) error {
-	data, err := json.Marshal(*event)
+// HandlePositionUpdate handles the event and forwards it to it's next destination
+func (handler *KafkaEventHandler) HandlePositionUpdate(positionUpdate *grpcClient.PositionUpdate) error {
+
+	positionUpdateEvent := client.ConvertToPositionUpdateEvent(positionUpdate)
+
+	data, err := json.Marshal(*positionUpdateEvent)
 
 	if err != nil {
 		return err
 	}
 
-	handler.producerChannel <- &data
+	handler.producer.Publish(&kafka.KafkaMessage{Topic: "position-events", Payload: data})
 
 	return nil
-}
-
-// Close any connections or channels which the event handler may be using
-func (handler *KafkaEventHandler) Close() {
-	close(handler.producerChannel)
 }

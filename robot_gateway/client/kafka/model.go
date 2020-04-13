@@ -1,6 +1,6 @@
 package kafka
 
-// PositionUpdateEvent is an internal represeantion of an position update from a robot
+// PositionUpdateEvent represents position update from a robot
 type PositionUpdateEvent struct {
 	Sequence  int64
 	RobotID   string
@@ -8,8 +8,24 @@ type PositionUpdateEvent struct {
 	Position  Position
 }
 
-// Position is an internal representaion of a robots position
+// Position represents a robots position
 type Position struct {
 	X int32
 	Y int32
 }
+
+// SessionUpdateEvent represents a session update from a robot
+type SessionUpdateEvent struct {
+	SessionID    string
+	SessionState SessionState
+}
+
+// SessionState represents the state of session
+type SessionState string
+
+const (
+	// STARTED indicates that a session is started
+	STARTED SessionState = "STARTED"
+	// FINISHED indicates that a session is finished
+	FINISHED SessionState = "FINISHED"
+)
