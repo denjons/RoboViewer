@@ -49,7 +49,7 @@ func main() {
 
 	sessionID := uuid.NewV1().String()
 	for i := int32(1); i <= 1000; i++ {
-		value := &pb.PositionUpdate{SequenceNumber: &pb.SequenceNumber{Value: 1}, Position: &pb.Position{X: i, Y: (i + 1)},
+		value := &pb.PositionUpdate{SequenceNumber: &pb.SequenceNumber{Value: int64(i)}, Position: &pb.Position{X: i, Y: (i + 1)},
 			RobotId: &pb.RobotId{Value: robotID.Value}, SessionId: &pb.SessionId{Value: sessionID}}
 		if sendErr := stream.Send(value); sendErr != nil {
 			log.Fatalf("Failed to send a update: %v", err)
@@ -93,7 +93,9 @@ func mapRobotToFloor(robotID *rsClient.RobotID, floorID *rsClient.FloorID) {
 		log.Fatalf("Could not parse robot request %v", err)
 	}
 
-	post(&rfMapJSON, "/floor/map/robot")
+	bytes := post(&rfMapJSON, "/floor/map/robot")
+
+	log.Printf("map: %v", string(bytes))
 }
 
 func createFloor(name string, width int, grid []int) *rsClient.FloorID {
