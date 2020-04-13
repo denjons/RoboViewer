@@ -74,11 +74,11 @@ func (r *Repository) GetSession(sessionID *SessionID) (*Session, error) {
 
 	err := r.db.QueryRowContext(r.ctx, `SELECT s.id as session_id, s.uuid as session_uuid, s.created as session_created, 
 	r.id as robot_id, r.uuid as robot_uuid, r.created as robot_created, r.name as robot_name, r.width as robot_width, r.height as robot_height,
-	f.id as floor_id, s.uuid as floor_uuid, f.created as floor_created, f.name as floor_name, f.width as floor_width, f.grid as floor_grid
+	f.id as floor_id, f.uuid as floor_uuid, f.created as floor_created, f.name as floor_name, f.width as floor_width, f.grid as floor_grid
 	FROM sessions s 
-	OUTER LEFT JOIN robots r ON r.id = s.robotid
-  OUTER LEFT JOIN floors f ON f.id = s.floorid
-	WHERE s.id=?`, sessionID.Value).Scan(
+	LEFT OUTER JOIN robots r ON r.id = s.robotid 
+  LEFT OUTER JOIN floors f ON f.id = s.floorid 
+	WHERE s.uuid=$1`, sessionID.Value).Scan(
 		&ID, &sessionUUID, &sessionCreated,
 		&robotID, &robotUUID, &robotCreated, &robotName, &robotWidth, &robotHeight,
 		&floorID, &floorUUID, &floorCreated, &floorName, &floorWidth, &floorGrid)
@@ -103,10 +103,10 @@ func (r *Repository) GetRobot(robotID *RobotID) (*Robot, error) {
 
 	err := r.db.QueryRowContext(r.ctx, `SELECT 
 	r.id as robot_id, r.uuid as robot_uuid, r.created as robot_created, r.name as robot_name, r.width as robot_width, r.height as robot_height,
-	f.id as floor_id, s.uuid as floor_uuid, f.created as floor_created, f.name as floor_name, f.width as floor_width, f.grid as floor_grid
+	f.id as floor_id, f.uuid as floor_uuid, f.created as floor_created, f.name as floor_name, f.width as floor_width, f.grid as floor_grid
 	FROM robots r 
-  OUTER LEFT JOIN floors f ON f.id = r.floorid
-	WHERE s.id=?`, robotID.Value).Scan(
+  LEFT OUTER JOIN floors f ON f.id = r.floorid
+	WHERE r.uuid=$1`, robotID.Value).Scan(
 		&ID, &robotUUID, &robotCreated, &robotName, &robotWidth, &robotHeight,
 		&floorID, &floorUUID, &floorCreated, &floorName, &floorWidth, &floorGrid)
 	switch {

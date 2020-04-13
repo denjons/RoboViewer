@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"log"
 
 	kafka "github.com/denjons/RoboViewer/robot_gateway/client/kafka"
 	db "github.com/denjons/RoboViewer/robot_service/database"
@@ -25,5 +26,10 @@ func (s *SessionEventService) HandlePositionUpdateEvent(event *kafka.PositionUpd
 	sessionID := &db.SessionID{Value: event.SessionID}
 	robotID := &db.RobotID{Value: event.RobotID}
 	point := &db.Point{Sequence: event.Sequence, X: event.Position.X, Y: event.Position.Y}
-	s.sessionCache.UpdateSession(sessionID, robotID, point)
+	err := s.sessionCache.UpdateSession(sessionID, robotID, point)
+
+	if err != nil {
+		log.Fatalf("Error handling position event %v, message %v", err, *event)
+	}
+
 }

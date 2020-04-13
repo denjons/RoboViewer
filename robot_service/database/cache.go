@@ -71,6 +71,10 @@ func (sc *SessionCache) getExistingSession(sessionID *SessionID) (*Session, erro
 	if err != nil {
 		return nil, err
 	}
+	if session == nil {
+		return nil, nil
+	}
+
 	sc.cache[sessionID.Value] = *session
 
 	return session, nil
